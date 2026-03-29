@@ -1,0 +1,2484 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Pedidos — Materiales</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Fuse.js/7.0.0/fuse.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════════
+   TOKENS & VARIABLES
+═══════════════════════════════════════════════ */
+:root {
+  --bg:         #0f1117;
+  --bg2:        #161b24;
+  --bg3:        #1c2333;
+  --border:     #2a3347;
+  --border2:    #3a4a66;
+  --text:       #e2e8f0;
+  --text2:      #94a3b8;
+  --text3:      #64748b;
+  --accent:     #f59e0b;
+  --accent2:    #d97706;
+  --green:      #10b981;
+  --red:        #ef4444;
+  --blue:       #3b82f6;
+  --purple:     #8b5cf6;
+  --orange:     #f97316;
+  --mono:       'IBM Plex Mono', monospace;
+  --sans:       'IBM Plex Sans', sans-serif;
+  --r:          4px;
+  --r2:         8px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════
+   SCROLLBARS
+═══════════════════════════════════════════════ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg2); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ═══════════════════════════════════════════════
+   ROLE SELECTOR SCREEN
+═══════════════════════════════════════════════ */
+#role-screen {
+  position: fixed; inset: 0;
+  background: var(--bg);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000;
+  flex-direction: column;
+  gap: 0;
+}
+#role-screen.hidden { display: none; }
+
+.role-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+.role-header .logo-line {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--accent);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-bottom: 12px;
+}
+.role-header h1 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.5px;
+}
+.role-header p {
+  font-size: 13px;
+  color: var(--text3);
+  margin-top: 6px;
+}
+
+.role-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 220px);
+  gap: 12px;
+}
+
+.role-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 24px 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.role-card:hover {
+  border-color: var(--accent);
+  background: var(--bg3);
+  transform: translateY(-2px);
+}
+.role-icon {
+  font-size: 28px;
+  margin-bottom: 10px;
+}
+.role-card h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.role-card p {
+  font-size: 11px;
+  color: var(--text3);
+  line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════
+   APP SHELL
+═══════════════════════════════════════════════ */
+#app {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  grid-template-rows: 48px 1fr;
+  height: 100vh;
+}
+#app.hidden { display: none; }
+
+/* ═══════════════════════════════════════════════
+   TOPBAR
+═══════════════════════════════════════════════ */
+#topbar {
+  grid-column: 1 / -1;
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 16px;
+}
+.topbar-logo {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 2px;
+}
+.topbar-sep { flex: 1; }
+.topbar-role {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text3);
+}
+.topbar-role span {
+  color: var(--accent);
+  font-weight: 600;
+}
+.topbar-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text2);
+  font-size: 11px;
+  font-family: var(--mono);
+  padding: 4px 10px;
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: all 0.1s;
+}
+.topbar-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ═══════════════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════════════ */
+#sidebar {
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  padding: 12px 0;
+  overflow-y: auto;
+}
+
+.nav-section {
+  padding: 8px 12px 4px;
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text3);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 13px;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all 0.1s;
+  border-left: 3px solid transparent;
+  user-select: none;
+}
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active {
+  background: var(--bg3);
+  color: var(--accent);
+  border-left-color: var(--accent);
+}
+.nav-item .nav-icon { font-size: 15px; width: 20px; text-align: center; }
+.nav-item .nav-badge {
+  margin-left: auto;
+  background: var(--red);
+  color: white;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
+/* ═══════════════════════════════════════════════
+   MAIN CONTENT
+═══════════════════════════════════════════════ */
+#main {
+  overflow-y: auto;
+  background: var(--bg);
+}
+
+.view { display: none; padding: 24px; }
+.view.active { display: block; }
+
+/* ═══════════════════════════════════════════════
+   PAGE HEADERS
+═══════════════════════════════════════════════ */
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  gap: 16px;
+}
+.page-title { font-size: 20px; font-weight: 700; color: var(--text); }
+.page-subtitle { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+/* ═══════════════════════════════════════════════
+   BUTTONS
+═══════════════════════════════════════════════ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-family: var(--sans);
+  font-weight: 500;
+  border-radius: var(--r);
+  cursor: pointer;
+  transition: all 0.12s;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: #0f1117; border-color: var(--accent); }
+.btn-primary:hover { background: var(--accent2); }
+.btn-ghost { background: transparent; color: var(--text2); border-color: var(--border); }
+.btn-ghost:hover { border-color: var(--border2); color: var(--text); background: var(--bg3); }
+.btn-danger { background: transparent; color: var(--red); border-color: var(--red); }
+.btn-danger:hover { background: var(--red); color: white; }
+.btn-success { background: var(--green); color: white; border-color: var(--green); }
+.btn-success:hover { opacity: 0.85; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ═══════════════════════════════════════════════
+   CARDS & PANELS
+═══════════════════════════════════════════════ */
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.card-title { font-size: 14px; font-weight: 600; color: var(--text); }
+
+/* ═══════════════════════════════════════════════
+   STAT CARDS (DASHBOARD)
+═══════════════════════════════════════════════ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 16px 20px;
+}
+.stat-label {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1;
+}
+.stat-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.stat-card.accent .stat-value { color: var(--accent); }
+.stat-card.green .stat-value { color: var(--green); }
+.stat-card.blue .stat-value { color: var(--blue); }
+.stat-card.orange .stat-value { color: var(--orange); }
+
+/* ═══════════════════════════════════════════════
+   TABLES
+═══════════════════════════════════════════════ */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text3);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  white-space: nowrap;
+}
+td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+  vertical-align: middle;
+}
+tr:hover td { background: var(--bg3); color: var(--text); }
+tr:last-child td { border-bottom: none; }
+
+.td-mono { font-family: var(--mono); font-size: 12px; }
+.td-bold { font-weight: 600; color: var(--text); }
+
+/* ═══════════════════════════════════════════════
+   STATUS BADGES
+═══════════════════════════════════════════════ */
+.badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+  letter-spacing: 0.5px;
+}
+.badge-draft      { background: #1e2a3a; color: var(--text3); border: 1px solid var(--border); }
+.badge-pending    { background: #2a2000; color: var(--accent); border: 1px solid #4a3800; }
+.badge-approved   { background: #0a2a1a; color: var(--green); border: 1px solid #0a4a2a; }
+.badge-returned   { background: #2a0a0a; color: var(--red); border: 1px solid #4a1a1a; }
+.badge-process    { background: #0a1a3a; color: var(--blue); border: 1px solid #1a3a6a; }
+.badge-received   { background: #1a1a3a; color: var(--purple); border: 1px solid #3a3a6a; }
+.badge-cancelled  { background: #2a1a0a; color: var(--orange); border: 1px solid #4a3a1a; }
+
+/* ═══════════════════════════════════════════════
+   FORMS
+═══════════════════════════════════════════════ */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.form-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.form-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field-full { grid-column: 1 / -1; }
+
+label {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text3);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+input, select, textarea {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  padding: 8px 10px;
+  outline: none;
+  transition: border-color 0.12s;
+  width: 100%;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+}
+input::placeholder, textarea::placeholder { color: var(--text3); }
+select option { background: var(--bg3); }
+textarea { resize: vertical; min-height: 60px; }
+
+/* ═══════════════════════════════════════════════
+   ITEMS TABLE (PEDIDO FORM)
+═══════════════════════════════════════════════ */
+.items-section {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.items-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg3);
+}
+.items-table { width: 100%; border-collapse: collapse; }
+.items-table th {
+  background: var(--bg3);
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+.items-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+.items-table tr:last-child td { border-bottom: none; }
+.items-table input, .items-table select {
+  padding: 5px 8px;
+  font-size: 12px;
+}
+
+/* ═══════════════════════════════════════════════
+   SIMILARITY SUGGESTIONS
+═══════════════════════════════════════════════ */
+.suggestions-box {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  margin-top: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 100;
+}
+.suggestion-item {
+  padding: 8px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.1s;
+}
+.suggestion-item:last-child { border-bottom: none; }
+.suggestion-item:hover { background: var(--bg3); }
+.sug-code { font-family: var(--mono); font-size: 10px; color: var(--accent); }
+.sug-desc { font-size: 12px; color: var(--text); margin: 2px 0; }
+.sug-meta { font-size: 10px; color: var(--text3); display: flex; gap: 12px; }
+.sug-stock-ok { color: var(--green); font-weight: 600; }
+.sug-stock-no { color: var(--red); }
+
+/* ═══════════════════════════════════════════════
+   TIMELINE
+═══════════════════════════════════════════════ */
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 4px 0;
+}
+.tl-item {
+  display: flex;
+  gap: 12px;
+  padding: 8px 0;
+  position: relative;
+}
+.tl-item:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 14px;
+  top: 32px;
+  bottom: -4px;
+  width: 1px;
+  background: var(--border);
+}
+.tl-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--bg3);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+.tl-dot.done { border-color: var(--green); background: #0a2a1a; }
+.tl-dot.active { border-color: var(--accent); background: #2a1e00; }
+.tl-content { flex: 1; }
+.tl-state { font-weight: 600; font-size: 13px; color: var(--text); }
+.tl-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+/* ═══════════════════════════════════════════════
+   MODAL
+═══════════════════════════════════════════════ */
+.modal-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 900;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r2);
+  max-width: 700px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+}
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  position: sticky; top: 0;
+  background: var(--bg2);
+}
+.modal-title { font-size: 16px; font-weight: 700; }
+.modal-close {
+  background: none; border: none; color: var(--text3);
+  font-size: 20px; cursor: pointer; padding: 0 4px;
+  line-height: 1;
+}
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 20px; }
+.modal-footer {
+  padding: 16px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* ═══════════════════════════════════════════════
+   ALERTS / TOAST
+═══════════════════════════════════════════════ */
+#toast {
+  position: fixed;
+  bottom: 20px; right: 20px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r2);
+  padding: 12px 18px;
+  font-size: 13px;
+  color: var(--text);
+  z-index: 9999;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.2s;
+  max-width: 320px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+}
+#toast.show { transform: translateY(0); opacity: 1; }
+#toast.success { border-color: var(--green); }
+#toast.error { border-color: var(--red); }
+
+/* ═══════════════════════════════════════════════
+   PRIORIDAD COLORS
+═══════════════════════════════════════════════ */
+.prio-baja   { color: var(--text3); }
+.prio-media  { color: var(--blue); }
+.prio-alta   { color: var(--accent); }
+.prio-urgente { color: var(--red); font-weight: 700; }
+
+/* ═══════════════════════════════════════════════
+   FILTER BAR
+═══════════════════════════════════════════════ */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.filter-bar input, .filter-bar select {
+  width: auto;
+  min-width: 140px;
+}
+.filter-bar .spacer { flex: 1; }
+
+/* ═══════════════════════════════════════════════
+   EMPTY STATE
+═══════════════════════════════════════════════ */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text3);
+}
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+.empty-title { font-size: 15px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+.empty-sub { font-size: 13px; }
+
+/* ═══════════════════════════════════════════════
+   IMPORT ZONE
+═══════════════════════════════════════════════ */
+.drop-zone {
+  border: 2px dashed var(--border2);
+  border-radius: var(--r2);
+  padding: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg2);
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--bg3);
+}
+.drop-zone p { color: var(--text3); font-size: 13px; margin-top: 8px; }
+.drop-zone .dz-icon { font-size: 32px; margin-bottom: 8px; }
+.drop-zone strong { color: var(--text); }
+
+/* ═══════════════════════════════════════════════
+   PROGRESS BAR
+═══════════════════════════════════════════════ */
+.progress-bar {
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 2px;
+  transition: width 0.3s;
+}
+
+/* ═══════════════════════════════════════════════
+   DETAIL ROWS
+═══════════════════════════════════════════════ */
+.detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.detail-item label { display: block; }
+.detail-value { font-size: 14px; color: var(--text); margin-top: 4px; font-weight: 500; }
+.detail-value.mono { font-family: var(--mono); }
+
+/* ═══════════════════════════════════════════════
+   SECTION DIVIDER
+═══════════════════════════════════════════════ */
+.section-divider {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  padding: 16px 0 8px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .form-grid { grid-template-columns: 1fr 1fr; }
+  .detail-grid { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ╔══════════════════════════════════════════╗
+     ║         ROLE SELECTOR SCREEN             ║
+     ╚══════════════════════════════════════════╝ -->
+<div id="role-screen">
+  <div class="role-header">
+    <div class="logo-line">⬡ Sistema de Control</div>
+    <h1>Pedidos de Materiales</h1>
+    <p>Seleccioná tu rol para continuar</p>
+  </div>
+  <div class="role-grid">
+    <div class="role-card" onclick="setRole('tecnico')">
+      <div class="role-icon">🔧</div>
+      <h3>Técnico</h3>
+      <p>Registrar pedidos de materiales para campo</p>
+    </div>
+    <div class="role-card" onclick="setRole('supervisor')">
+      <div class="role-icon">✅</div>
+      <h3>Supervisor</h3>
+      <p>Aprobar o rechazar pedidos de tu área</p>
+    </div>
+    <div class="role-card" onclick="setRole('almacen')">
+      <div class="role-icon">📦</div>
+      <h3>Almacén</h3>
+      <p>Gestionar compras e importar datos ERP</p>
+    </div>
+    <div class="role-card" onclick="setRole('admin')">
+      <div class="role-icon">⚙️</div>
+      <h3>Administrador</h3>
+      <p>Configuración, reportes y estadísticas</p>
+    </div>
+  </div>
+</div>
+
+<!-- ╔══════════════════════════════════════════╗
+     ║                APP SHELL                 ║
+     ╚══════════════════════════════════════════╝ -->
+<div id="app" class="hidden">
+
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <span class="topbar-logo">⬡ CPM</span>
+    <span style="font-size:13px; color:var(--text3); margin-left:8px;">Control de Pedidos de Materiales</span>
+    <div class="topbar-sep"></div>
+    <span class="topbar-role">Rol: <span id="role-display">—</span></span>
+    <button class="topbar-btn" onclick="logout()">Cambiar rol</button>
+  </div>
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <!-- Siempre visible -->
+    <div class="nav-section">Pedidos</div>
+    <div class="nav-item active" data-view="dashboard" onclick="navigate('dashboard')">
+      <span class="nav-icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" data-view="mis-pedidos" onclick="navigate('mis-pedidos')">
+      <span class="nav-icon">📋</span> Mis Pedidos
+    </div>
+    <div class="nav-item" data-view="nuevo-pedido" onclick="navigate('nuevo-pedido')">
+      <span class="nav-icon">➕</span> Nuevo Pedido
+    </div>
+
+    <!-- Supervisor + Almacén + Admin -->
+    <div id="nav-aprobacion-section">
+      <div class="nav-section">Gestión</div>
+      <div class="nav-item" data-view="aprobacion" onclick="navigate('aprobacion')" id="nav-aprobacion">
+        <span class="nav-icon">✅</span> Aprobación
+        <span class="nav-badge hidden" id="badge-aprobacion">0</span>
+      </div>
+    </div>
+
+    <div id="nav-almacen-section">
+      <div class="nav-item" data-view="seguimiento" onclick="navigate('seguimiento')" id="nav-seguimiento">
+        <span class="nav-icon">🔍</span> Seguimiento ERP
+      </div>
+      <div class="nav-item" data-view="ajustes-estado" onclick="navigate('ajustes-estado')" id="nav-ajustes">
+        <span class="nav-icon">🔧</span> Ajuste de Estados
+      </div>
+    </div>
+
+    <div id="nav-admin-section">
+      <div class="nav-section">Sistema</div>
+      <div class="nav-item" data-view="importar" onclick="navigate('importar')" id="nav-importar">
+        <span class="nav-icon">📂</span> Importar Datos
+      </div>
+      <div class="nav-item" data-view="reportes" onclick="navigate('reportes')" id="nav-reportes">
+        <span class="nav-icon">📈</span> Reportes
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div id="main">
+
+    <!-- ══════ VIEW: DASHBOARD ══════ -->
+    <div class="view active" id="view-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Dashboard</div>
+          <div class="page-subtitle" id="dash-subtitle">Resumen general del sistema</div>
+        </div>
+      </div>
+
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card accent">
+          <div class="stat-label">Total Pedidos</div>
+          <div class="stat-value" id="stat-total">0</div>
+          <div class="stat-sub">registrados en el sistema</div>
+        </div>
+        <div class="stat-card orange">
+          <div class="stat-label">Pendientes</div>
+          <div class="stat-value" id="stat-pendientes">0</div>
+          <div class="stat-sub">esperando aprobación</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">En Proceso</div>
+          <div class="stat-value" id="stat-proceso">0</div>
+          <div class="stat-sub">gestionándose en compras</div>
+        </div>
+        <div class="stat-card blue">
+          <div class="stat-label">Recibidos</div>
+          <div class="stat-value" id="stat-recibidos">0</div>
+          <div class="stat-sub">materiales entregados</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Pedidos Recientes</span>
+          <button class="btn btn-ghost btn-sm" onclick="navigate('mis-pedidos')">Ver todos →</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>MWL</th>
+                <th>Descripción</th>
+                <th>Campo</th>
+                <th>Prioridad</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="dash-recientes"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ VIEW: MIS PEDIDOS ══════ -->
+    <div class="view" id="view-mis-pedidos">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Pedidos</div>
+          <div class="page-subtitle">Todos los pedidos registrados</div>
+        </div>
+        <button class="btn btn-primary" onclick="navigate('nuevo-pedido')">➕ Nuevo Pedido</button>
+      </div>
+
+      <div class="filter-bar">
+        <input type="text" id="filter-search" placeholder="Buscar MWL, descripción..." oninput="renderPedidosList()" style="min-width:200px;">
+        <select id="filter-estado" onchange="renderPedidosList()">
+          <option value="">Todos los estados</option>
+          <option>Borrador</option>
+          <option>Pendiente Aprobacion</option>
+          <option>Devuelto</option>
+          <option>Aprobado</option>
+          <option>En Proceso Compra</option>
+          <option>9 Recibido</option>
+          <option>7 Anulado</option>
+        </select>
+        <select id="filter-campo" onchange="renderPedidosList()">
+          <option value="">Todos los campos</option>
+          <option>CRC-MANTTO</option>
+          <option>PCH-MANTTO</option>
+          <option>PJS-MANTTO</option>
+          <option>VGR-MANTTO</option>
+        </select>
+        <div class="spacer"></div>
+        <span id="pedidos-count" style="font-size:12px;color:var(--text3);font-family:var(--mono);"></span>
+      </div>
+
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>MWL</th>
+                <th>Descripción</th>
+                <th>Campo</th>
+                <th>Solicitante</th>
+                <th>Ítems</th>
+                <th>Prioridad</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="pedidos-tbody"></tbody>
+          </table>
+        </div>
+        <div id="pedidos-empty" class="empty-state hidden">
+          <div class="empty-icon">📋</div>
+          <div class="empty-title">Sin pedidos</div>
+          <div class="empty-sub">Creá el primer pedido con el botón "Nuevo Pedido"</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ VIEW: NUEVO PEDIDO ══════ -->
+    <div class="view" id="view-nuevo-pedido">
+      <div class="page-header">
+        <div>
+          <div class="page-title" id="form-title">Nuevo Pedido</div>
+          <div class="page-subtitle" id="form-mwl-display">MWL asignado al guardar</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-ghost" onclick="navigate('mis-pedidos')">Cancelar</button>
+          <button class="btn btn-ghost" onclick="savePedido('Borrador')">Guardar borrador</button>
+          <button class="btn btn-primary" onclick="savePedido('Pendiente Aprobacion')">Enviar al Supervisor →</button>
+        </div>
+      </div>
+
+      <input type="hidden" id="edit-id" value="">
+
+      <div class="card">
+        <div class="section-divider">Datos generales</div>
+        <div class="form-grid">
+          <div class="field">
+            <label>Campo / Área *</label>
+            <select id="f-campo">
+              <option value="">Seleccionar...</option>
+              <option>CRC-MANTTO</option>
+              <option>PCH-MANTTO</option>
+              <option>PJS-MANTTO</option>
+              <option>VGR-MANTTO</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Solicitante *</label>
+            <input type="text" id="f-solicitante" placeholder="Apellido, Nombre">
+          </div>
+          <div class="field">
+            <label>Prioridad</label>
+            <select id="f-prioridad">
+              <option>BAJA</option>
+              <option>MEDIA</option>
+              <option selected>ALTA</option>
+              <option>URGENTE</option>
+            </select>
+          </div>
+          <div class="field field-full">
+            <label>Descripción general del pedido *</label>
+            <input type="text" id="f-descripcion" placeholder="Ej: REPUESTOS BOMBA CENTRIFUGA CRC-M-001">
+          </div>
+        </div>
+      </div>
+
+      <div class="items-section">
+        <div class="items-section-header">
+          <span style="font-size:13px; font-weight:600;">Ítems del pedido</span>
+          <button class="btn btn-ghost btn-sm" onclick="addItem()">+ Agregar ítem</button>
+        </div>
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th style="width:30px">#</th>
+              <th style="width:140px">Código ERP</th>
+              <th>Descripción del material</th>
+              <th style="width:80px">Cantidad</th>
+              <th style="width:70px">Unidad</th>
+              <th style="width:30px"></th>
+            </tr>
+          </thead>
+          <tbody id="items-tbody"></tbody>
+        </table>
+        <div id="items-empty" style="padding:24px; text-align:center; color:var(--text3); font-size:13px;">
+          Sin ítems. Hacé clic en "+ Agregar ítem" para comenzar.
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ VIEW: APROBACIÓN ══════ -->
+    <div class="view" id="view-aprobacion">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Bandeja de Aprobación</div>
+          <div class="page-subtitle">Pedidos pendientes de revisión</div>
+        </div>
+      </div>
+
+      <div class="filter-bar">
+        <select id="filter-apro-campo" onchange="renderAprobacionList()">
+          <option value="">Todos los campos</option>
+          <option>CRC-MANTTO</option>
+          <option>PCH-MANTTO</option>
+          <option>PJS-MANTTO</option>
+          <option>VGR-MANTTO</option>
+        </select>
+        <select id="filter-apro-prio" onchange="renderAprobacionList()">
+          <option value="">Todas las prioridades</option>
+          <option>URGENTE</option>
+          <option>ALTA</option>
+          <option>MEDIA</option>
+          <option>BAJA</option>
+        </select>
+      </div>
+
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>MWL</th>
+                <th>Descripción</th>
+                <th>Campo</th>
+                <th>Solicitante</th>
+                <th>Ítems</th>
+                <th>Prioridad</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="aprobacion-tbody"></tbody>
+          </table>
+        </div>
+        <div id="aprobacion-empty" class="empty-state hidden">
+          <div class="empty-icon">✅</div>
+          <div class="empty-title">Sin pedidos pendientes</div>
+          <div class="empty-sub">No hay pedidos esperando aprobación</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ VIEW: SEGUIMIENTO ERP ══════ -->
+    <div class="view" id="view-seguimiento">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Seguimiento ERP</div>
+          <div class="page-subtitle">Estado de pedidos cruzados con el sistema ERP</div>
+        </div>
+        <button class="btn btn-primary" onclick="document.getElementById('erp-file-input').click()">
+          📂 Importar Resumen ERP
+        </button>
+        <input type="file" id="erp-file-input" accept=".xlsx,.csv" style="display:none" onchange="importERP(this)">
+      </div>
+
+      <div id="erp-status-bar" class="card" style="display:none; padding:12px 16px;">
+        <span style="font-size:12px; color:var(--text3);">Última importación ERP: </span>
+        <span id="erp-version" style="font-family:var(--mono); font-size:12px; color:var(--accent);"></span>
+      </div>
+
+      <div class="filter-bar">
+        <input type="text" id="filter-seg-search" placeholder="Buscar MWL..." oninput="renderSeguimiento()" style="min-width:180px;">
+        <select id="filter-seg-estado" onchange="renderSeguimiento()">
+          <option value="">Todos los estados</option>
+          <option>1 En Registro AAUTO</option>
+          <option>2 Sin Chaconet</option>
+          <option>3 En proceso Chaconet</option>
+          <option>4 Desierto</option>
+          <option>5 Con Orden de Compra</option>
+          <option>6 Entrega Parcial</option>
+          <option>7 Anulado</option>
+          <option>8 Contrato Maestro</option>
+          <option>8 Transferencia</option>
+          <option>9 Recibido</option>
+        </select>
+      </div>
+
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>MWL</th>
+                <th>Descripción</th>
+                <th>Campo</th>
+                <th>Estado Chaconet</th>
+                <th>OC</th>
+                <th>Recepción</th>
+                <th>Estado Pedido</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="seguimiento-tbody"></tbody>
+          </table>
+        </div>
+        <div id="seguimiento-empty" class="empty-state">
+          <div class="empty-icon">🔍</div>
+          <div class="empty-title">Sin datos ERP</div>
+          <div class="empty-sub">Importá el Resumen de Pedidos del ERP para ver el seguimiento</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ VIEW: AJUSTE DE ESTADOS ══════ -->
+    <div class="view" id="view-ajustes-estado">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Ajuste de Estados</div>
+          <div class="page-subtitle">Forzado manual de estado de pedidos</div>
+        </div>
+        <button class="btn btn-ghost" onclick="addAjuste()">+ Agregar ajuste</button>
+      </div>
+
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>MWL</th>
+                <th>Descripción</th>
+                <th>Estado Forzado</th>
+                <th>Comentario</th>
+                <th>Usuario</th>
+                <th>Fecha</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="ajustes-tbody"></tbody>
+          </table>
+        </div>
+        <div id="ajustes-empty" class="empty-state">
+          <div class="empty-icon">🔧</div>
+          <div class="empty-title">Sin ajustes registrados</div>
+          <div class="empty-sub">Usá esta tabla para forzar manualmente el estado de un pedido</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════ VIEW: IMPORTAR ══════ -->
+    <div class="view" id="view-importar">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Importar Datos</div>
+          <div class="page-subtitle">Carga de archivos desde el ERP</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Base de Materiales</span>
+          <span id="mat-version" style="font-family:var(--mono); font-size:11px; color:var(--text3);"></span>
+        </div>
+        <div class="drop-zone" id="dz-materiales"
+          ondragover="event.preventDefault(); this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="dropHandler(event, 'materiales')"
+          onclick="document.getElementById('mat-file-input').click()">
+          <div class="dz-icon">📊</div>
+          <strong>Base_de_datos_materiales_limpia.xlsx</strong>
+          <p>Arrastrá el archivo aquí o hacé clic para seleccionar<br>157k materiales — puede tardar 1-2 minutos</p>
+        </div>
+        <input type="file" id="mat-file-input" accept=".xlsx" style="display:none" onchange="importMateriales(this)">
+        <div id="mat-progress" style="display:none; margin-top:12px;">
+          <div style="font-size:12px; color:var(--text3); margin-bottom:4px;" id="mat-progress-label">Procesando...</div>
+          <div class="progress-bar"><div class="progress-fill" id="mat-progress-fill" style="width:0%"></div></div>
+        </div>
+        <div id="mat-result" style="margin-top:12px; display:none; font-size:13px; color:var(--green);"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Resumen de Pedidos ERP (SPM)</span>
+          <span id="erp-version2" style="font-family:var(--mono); font-size:11px; color:var(--text3);"></span>
+        </div>
+        <div class="drop-zone" id="dz-erp"
+          ondragover="event.preventDefault(); this.classList.add('drag-over')"
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="dropHandler(event, 'erp')"
+          onclick="document.getElementById('erp-file-input2').click()">
+          <div class="dz-icon">📋</div>
+          <strong>Resumen_de_pedidos.xlsx</strong>
+          <p>Importar periódicamente (recomendado: semanal)<br>Actualiza estados de seguimiento automáticamente</p>
+        </div>
+        <input type="file" id="erp-file-input2" accept=".xlsx" style="display:none" onchange="importERP(this)">
+        <div id="erp-progress" style="display:none; margin-top:12px;">
+          <div style="font-size:12px; color:var(--text3); margin-bottom:4px;" id="erp-progress-label">Procesando...</div>
+          <div class="progress-bar"><div class="progress-fill" id="erp-progress-fill" style="width:0%"></div></div>
+        </div>
+        <div id="erp-result" style="margin-top:12px; display:none; font-size:13px; color:var(--green);"></div>
+      </div>
+    </div>
+
+    <!-- ══════ VIEW: REPORTES ══════ -->
+    <div class="view" id="view-reportes">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Reportes</div>
+          <div class="page-subtitle">Generación de reportes mensuales</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Generar Reporte Mensual</span></div>
+        <div class="form-grid form-grid-2">
+          <div class="field">
+            <label>Mes</label>
+            <select id="rep-mes">
+              <option value="01">Enero</option>
+              <option value="02">Febrero</option>
+              <option value="03" selected>Marzo</option>
+              <option value="04">Abril</option>
+              <option value="05">Mayo</option>
+              <option value="06">Junio</option>
+              <option value="07">Julio</option>
+              <option value="08">Agosto</option>
+              <option value="09">Septiembre</option>
+              <option value="10">Octubre</option>
+              <option value="11">Noviembre</option>
+              <option value="12">Diciembre</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Año</label>
+            <input type="number" id="rep-anio" value="2026" min="2020" max="2030">
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="generarReporte()">📥 Generar XLSX</button>
+        <div id="rep-result" style="margin-top:12px; font-size:13px;"></div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- ╔══════════════════════════════════════════╗
+     ║              MODALS                      ║
+     ╚══════════════════════════════════════════╝ -->
+
+<!-- MODAL: PEDIDO DETALLE -->
+<div class="modal-overlay" id="modal-pedido">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-pedido-title">Detalle del Pedido</span>
+      <button class="modal-close" onclick="closeModal('modal-pedido')">×</button>
+    </div>
+    <div class="modal-body" id="modal-pedido-body"></div>
+    <div class="modal-footer" id="modal-pedido-footer"></div>
+  </div>
+</div>
+
+<!-- MODAL: APROBAR/RECHAZAR -->
+<div class="modal-overlay" id="modal-accion">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-accion-title">Aprobar Pedido</span>
+      <button class="modal-close" onclick="closeModal('modal-accion')">×</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="accion-pedido-id">
+      <input type="hidden" id="accion-tipo">
+      <div class="field">
+        <label>Comentario</label>
+        <textarea id="accion-comentario" rows="3" placeholder="Comentario (opcional para aprobar, requerido para rechazar)"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-accion')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-confirmar-accion" onclick="confirmarAccion()">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: AJUSTE ESTADO -->
+<div class="modal-overlay" id="modal-ajuste">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <span class="modal-title">Ajuste de Estado</span>
+      <button class="modal-close" onclick="closeModal('modal-ajuste')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid form-grid-2">
+        <div class="field">
+          <label>MWL</label>
+          <input type="text" id="aj-mwl" placeholder="MWL2600001">
+        </div>
+        <div class="field">
+          <label>Estado Forzado</label>
+          <select id="aj-estado">
+            <option value="">Seleccionar...</option>
+            <option>1 En Registro AAUTO</option>
+            <option>2 Sin Chaconet</option>
+            <option>3 En proceso Chaconet</option>
+            <option>4 Desierto</option>
+            <option>5 Con Orden de Compra</option>
+            <option>6 Entrega Parcial</option>
+            <option>7 Anulado</option>
+            <option>8 Contrato Maestro</option>
+            <option>8 Transferencia</option>
+            <option>9 Recibido</option>
+          </select>
+        </div>
+        <div class="field field-full">
+          <label>Descripción</label>
+          <input type="text" id="aj-desc" placeholder="Descripción del pedido">
+        </div>
+        <div class="field field-full">
+          <label>Comentario</label>
+          <textarea id="aj-comentario" rows="2" placeholder="Motivo del ajuste manual"></textarea>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-ajuste')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarAjuste()">Guardar Ajuste</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- ╔══════════════════════════════════════════╗
+     ║              JAVASCRIPT                  ║
+     ╚══════════════════════════════════════════╝ -->
+<script>
+'use strict';
+
+/* ═══════════════════════════════════════
+   CONFIG
+═══════════════════════════════════════ */
+const CFG = {
+  MWL_PREFIX: 'MWL26',
+  AREAS: ['CRC-MANTTO','PCH-MANTTO','PJS-MANTTO','VGR-MANTTO'],
+  ESTADOS_PEDIDO: [
+    'Borrador','Pendiente Aprobacion','Devuelto','Aprobado',
+    'En Proceso Compra',
+    '1 En Registro AAUTO','1 En Registro AREVI','1 En Registro INGRE',
+    '2 Sin Chaconet','3 En proceso Chaconet','4 Desierto',
+    '5 Con Orden de Compra','6 Entrega Parcial',
+    '7 Anulado','8 Contrato Maestro','8 Transferencia','9 Recibido'
+  ]
+};
+
+/* ═══════════════════════════════════════
+   LOCAL STORAGE HELPERS
+═══════════════════════════════════════ */
+const DB = {
+  get: (k, def=[]) => { try { return JSON.parse(localStorage.getItem(k)) ?? def; } catch { return def; } },
+  set: (k, v) => localStorage.setItem(k, JSON.stringify(v)),
+  getPedidos: ()   => DB.get('cpm_pedidos', []),
+  setPedidos: (v)  => DB.set('cpm_pedidos', v),
+  getAjustes: ()   => DB.get('cpm_ajustes', []),
+  setAjustes: (v)  => DB.set('cpm_ajustes', v),
+  getErpData: ()   => DB.get('cpm_erp', []),
+  setErpData: (v)  => DB.set('cpm_erp', v),
+  getMateriales: () => DB.get('cpm_materiales', []),
+  setMateriales: (v) => DB.set('cpm_materiales', v),
+  getConfig: (k, d=null) => DB.get('cpm_cfg_'+k, d),
+  setConfig: (k, v)     => DB.set('cpm_cfg_'+k, v),
+};
+
+/* ═══════════════════════════════════════
+   STATE
+═══════════════════════════════════════ */
+let currentRole = null;
+let fuseIndex   = null;
+let itemCounter = 0;
+
+/* ═══════════════════════════════════════
+   ROLE MANAGEMENT
+═══════════════════════════════════════ */
+const ROLE_LABELS = {
+  tecnico: 'Técnico',
+  supervisor: 'Supervisor',
+  almacen: 'Almacén',
+  admin: 'Administrador'
+};
+
+function setRole(role) {
+  currentRole = role;
+  sessionStorage.setItem('cpm_role', role);
+  document.getElementById('role-screen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('role-display').textContent = ROLE_LABELS[role];
+  applyRoleNav(role);
+  navigate('dashboard');
+  refreshDashboard();
+}
+
+function logout() {
+  currentRole = null;
+  sessionStorage.removeItem('cpm_role');
+  document.getElementById('role-screen').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+}
+
+function applyRoleNav(role) {
+  const show = (id, visible) => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = visible ? '' : 'none';
+  };
+  const canApprove = ['supervisor','almacen','admin'].includes(role);
+  const canAlmacen = ['almacen','admin'].includes(role);
+  const canAdmin   = role === 'admin';
+
+  show('nav-aprobacion-section', canApprove);
+  show('nav-almacen-section', canAlmacen);
+  show('nav-admin-section', canAdmin || canAlmacen);
+  show('nav-importar', canAlmacen || canAdmin);
+  show('nav-reportes', canAdmin);
+}
+
+/* ═══════════════════════════════════════
+   NAVIGATION / ROUTER
+═══════════════════════════════════════ */
+function navigate(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  const el = document.getElementById('view-'+view);
+  if (el) el.classList.add('active');
+  const nav = document.querySelector(`[data-view="${view}"]`);
+  if (nav) nav.classList.add('active');
+
+  // Lazy render
+  if (view === 'mis-pedidos')    renderPedidosList();
+  if (view === 'aprobacion')     renderAprobacionList();
+  if (view === 'seguimiento')    renderSeguimiento();
+  if (view === 'ajustes-estado') renderAjustes();
+  if (view === 'nuevo-pedido')   initNewPedidoForm();
+  if (view === 'dashboard')      refreshDashboard();
+}
+
+/* ═══════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════ */
+function refreshDashboard() {
+  const pedidos = DB.getPedidos();
+  const total     = pedidos.length;
+  const pendientes = pedidos.filter(p => p.estado === 'Pendiente Aprobacion').length;
+  const proceso   = pedidos.filter(p => ['Aprobado','En Proceso Compra','3 En proceso Chaconet','5 Con Orden de Compra','6 Entrega Parcial'].includes(p.estado)).length;
+  const recibidos = pedidos.filter(p => p.estado === '9 Recibido').length;
+
+  setText('stat-total',     total);
+  setText('stat-pendientes',pendientes);
+  setText('stat-proceso',   proceso);
+  setText('stat-recibidos', recibidos);
+
+  // Badge aprobacion
+  const badge = document.getElementById('badge-aprobacion');
+  if (badge) {
+    badge.textContent = pendientes;
+    badge.classList.toggle('hidden', pendientes === 0);
+  }
+
+  // Recent table
+  const recent = [...pedidos].sort((a,b) => b.fecha_solicitud.localeCompare(a.fecha_solicitud)).slice(0,5);
+  const tbody = document.getElementById('dash-recientes');
+  if (!tbody) return;
+  if (!recent.length) {
+    tbody.innerHTML = `<tr><td colspan="7" class="empty-state" style="border:none; padding:40px;">
+      <div class="empty-icon">📊</div>
+      <div class="empty-title">Sin pedidos aún</div>
+      <div class="empty-sub">Creá el primer pedido para comenzar</div>
+    </td></tr>`;
+    return;
+  }
+  tbody.innerHTML = recent.map(p => `
+    <tr>
+      <td class="td-mono td-bold">${p.id}</td>
+      <td>${truncate(p.descripcion, 40)}</td>
+      <td>${p.campo}</td>
+      <td><span class="prio-${p.prioridad.toLowerCase()}">${p.prioridad}</span></td>
+      <td>${badgeEstado(p.estado)}</td>
+      <td>${formatDate(p.fecha_solicitud)}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openPedidoDetail('${p.id}')">Ver →</button></td>
+    </tr>
+  `).join('');
+
+  document.getElementById('dash-subtitle').textContent =
+    `${total} pedidos en el sistema · ${new Date().toLocaleDateString('es-BO')}`;
+}
+
+/* ═══════════════════════════════════════
+   PEDIDOS LIST
+═══════════════════════════════════════ */
+function renderPedidosList() {
+  let pedidos = DB.getPedidos();
+  const search = (document.getElementById('filter-search')?.value || '').toLowerCase();
+  const estado = document.getElementById('filter-estado')?.value || '';
+  const campo  = document.getElementById('filter-campo')?.value || '';
+
+  if (search) pedidos = pedidos.filter(p =>
+    p.id.toLowerCase().includes(search) ||
+    p.descripcion.toLowerCase().includes(search) ||
+    p.solicitante.toLowerCase().includes(search)
+  );
+  if (estado) pedidos = pedidos.filter(p => p.estado === estado);
+  if (campo)  pedidos = pedidos.filter(p => p.campo === campo);
+
+  pedidos.sort((a,b) => b.fecha_solicitud.localeCompare(a.fecha_solicitud));
+
+  const tbody = document.getElementById('pedidos-tbody');
+  const empty = document.getElementById('pedidos-empty');
+  const count = document.getElementById('pedidos-count');
+  if (count) count.textContent = `${pedidos.length} pedido${pedidos.length !== 1 ? 's' : ''}`;
+
+  if (!pedidos.length) {
+    tbody.innerHTML = '';
+    empty?.classList.remove('hidden');
+    return;
+  }
+  empty?.classList.add('hidden');
+
+  tbody.innerHTML = pedidos.map(p => `
+    <tr>
+      <td class="td-mono td-bold">${p.id}</td>
+      <td>${truncate(p.descripcion, 40)}</td>
+      <td>${p.campo}</td>
+      <td>${p.solicitante}</td>
+      <td style="text-align:center;">${p.items.length}</td>
+      <td><span class="prio-${p.prioridad.toLowerCase()}">${p.prioridad}</span></td>
+      <td>${badgeEstado(p.estado)}</td>
+      <td>${formatDate(p.fecha_solicitud)}</td>
+      <td>
+        <button class="btn btn-ghost btn-sm" onclick="openPedidoDetail('${p.id}')">Ver</button>
+        ${['Borrador','Devuelto'].includes(p.estado)
+          ? `<button class="btn btn-ghost btn-sm" onclick="editPedido('${p.id}')" style="margin-left:4px;">✏️</button>`
+          : ''}
+      </td>
+    </tr>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════
+   PEDIDO FORM
+═══════════════════════════════════════ */
+let editingPedidoId = null;
+itemCounter = 0;
+
+function initNewPedidoForm(pedido=null) {
+  editingPedidoId = pedido?.id || null;
+  itemCounter = 0;
+
+  document.getElementById('form-title').textContent = pedido ? 'Editar Pedido' : 'Nuevo Pedido';
+  document.getElementById('form-mwl-display').textContent = pedido ? pedido.id : 'MWL asignado al guardar';
+  document.getElementById('f-campo').value       = pedido?.campo || '';
+  document.getElementById('f-solicitante').value = pedido?.solicitante || '';
+  document.getElementById('f-prioridad').value   = pedido?.prioridad || 'ALTA';
+  document.getElementById('f-descripcion').value = pedido?.descripcion || '';
+
+  const tbody = document.getElementById('items-tbody');
+  tbody.innerHTML = '';
+  document.getElementById('items-empty').style.display = 'block';
+
+  if (pedido?.items?.length) {
+    pedido.items.forEach(item => addItem(item));
+  }
+}
+
+function editPedido(id) {
+  const p = DB.getPedidos().find(x => x.id === id);
+  if (!p) return;
+  initNewPedidoForm(p);
+  navigate('nuevo-pedido');
+}
+
+function addItem(data=null) {
+  itemCounter++;
+  const empty = document.getElementById('items-empty');
+  if (empty) empty.style.display = 'none';
+
+  const tbody = document.getElementById('items-tbody');
+  const idx = itemCounter;
+  const tr = document.createElement('tr');
+  tr.id = `item-row-${idx}`;
+  tr.innerHTML = `
+    <td style="color:var(--text3); font-family:var(--mono); font-size:11px;">${idx}</td>
+    <td>
+      <input type="text" id="item-cod-${idx}" value="${data?.codigo_material||''}"
+        placeholder="Sin código" style="font-family:var(--mono); font-size:11px;">
+    </td>
+    <td style="position:relative;">
+      <input type="text" id="item-desc-${idx}" value="${data?.descripcion||''}"
+        placeholder="Descripción del material requerido"
+        oninput="onDescInput(${idx})" autocomplete="off">
+      <div id="sug-box-${idx}" class="suggestions-box" style="display:none; position:absolute; left:0; right:0; top:100%; z-index:200;"></div>
+    </td>
+    <td>
+      <input type="number" id="item-cant-${idx}" value="${data?.cantidad||''}"
+        placeholder="0" min="0.01" step="0.01">
+    </td>
+    <td>
+      <input type="text" id="item-und-${idx}" value="${data?.unidad||'E'}"
+        placeholder="E" style="font-family:var(--mono);">
+    </td>
+    <td>
+      <button onclick="removeItem(${idx})" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:2px 6px;" title="Quitar ítem">×</button>
+    </td>
+  `;
+  tbody.appendChild(tr);
+  if (!data) document.getElementById(`item-desc-${idx}`)?.focus();
+}
+
+function removeItem(idx) {
+  document.getElementById(`item-row-${idx}`)?.remove();
+  const tbody = document.getElementById('items-tbody');
+  if (!tbody.children.length) {
+    document.getElementById('items-empty').style.display = 'block';
+  }
+}
+
+/* ═══════════════════════════════════════
+   SIMILARITY SEARCH
+═══════════════════════════════════════ */
+let suggestTimeout = null;
+
+function onDescInput(idx) {
+  clearTimeout(suggestTimeout);
+  const val = document.getElementById(`item-desc-${idx}`)?.value || '';
+  if (val.length < 3) {
+    hideSuggestions(idx);
+    return;
+  }
+  suggestTimeout = setTimeout(() => searchSimilar(idx, val), 200);
+}
+
+function searchSimilar(idx, query) {
+  const box = document.getElementById(`sug-box-${idx}`);
+  if (!box) return;
+
+  const mats = DB.getMateriales();
+  if (!mats.length) { hideSuggestions(idx); return; }
+
+  // Build or reuse fuse index
+  if (!fuseIndex || fuseIndex._docs !== mats) {
+    fuseIndex = new Fuse(mats, {
+      keys: [
+        { name: 'descripcion', weight: 0.7 },
+        { name: 'nro_parte',   weight: 0.2 },
+        { name: 'cod_material',weight: 0.1 }
+      ],
+      threshold: 0.45,
+      minMatchCharLength: 3,
+      includeScore: true
+    });
+    fuseIndex._docs = mats;
+  }
+
+  let results = fuseIndex.search(query, { limit: 8 });
+  // Bonus for stock > 0
+  results = results.map(r => ({
+    ...r,
+    finalScore: (r.score || 0.5) - (r.item.saldo > 0 ? 0.1 : 0)
+  })).sort((a,b) => a.finalScore - b.finalScore).slice(0,5);
+
+  if (!results.length) { hideSuggestions(idx); return; }
+
+  box.innerHTML = results.map(r => {
+    const m = r.item;
+    const stockHtml = m.saldo > 0
+      ? `<span class="sug-stock-ok">Stock: ${m.saldo} ${m.unidad}</span>`
+      : `<span class="sug-stock-no">Sin stock</span>`;
+    return `
+      <div class="suggestion-item" onclick="selectSuggestion(${idx}, '${escJS(m.cod_material)}', '${escJS(m.descripcion)}', '${m.unidad}', ${m.saldo})">
+        <div class="sug-code">${m.cod_material}</div>
+        <div class="sug-desc">${truncate(m.descripcion, 70)}</div>
+        <div class="sug-meta">
+          ${stockHtml}
+          <span>Dep: ${m.dep} · Alm: ${m.alm}</span>
+          ${m.nro_parte ? `<span>Nro.P: ${m.nro_parte}</span>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+  box.style.display = 'block';
+}
+
+function selectSuggestion(idx, cod, desc, unidad, saldo) {
+  document.getElementById(`item-cod-${idx}`).value  = cod;
+  document.getElementById(`item-desc-${idx}`).value = desc;
+  document.getElementById(`item-und-${idx}`).value  = unidad;
+  hideSuggestions(idx);
+}
+
+function hideSuggestions(idx) {
+  const box = document.getElementById(`sug-box-${idx}`);
+  if (box) box.style.display = 'none';
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('td')) {
+    document.querySelectorAll('[id^="sug-box-"]').forEach(b => b.style.display = 'none');
+  }
+});
+
+/* ═══════════════════════════════════════
+   SAVE PEDIDO
+═══════════════════════════════════════ */
+function savePedido(targetEstado) {
+  const campo      = document.getElementById('f-campo').value.trim();
+  const solicitante= document.getElementById('f-solicitante').value.trim();
+  const descripcion= document.getElementById('f-descripcion').value.trim();
+  const prioridad  = document.getElementById('f-prioridad').value;
+
+  if (!campo)       return toast('Seleccioná un campo/área', 'error');
+  if (!solicitante) return toast('Ingresá el nombre del solicitante', 'error');
+  if (!descripcion) return toast('Ingresá una descripción del pedido', 'error');
+
+  // Collect items
+  const rows = document.querySelectorAll('[id^="item-row-"]');
+  const items = [];
+  for (const row of rows) {
+    const idxStr = row.id.replace('item-row-','');
+    const desc = document.getElementById(`item-desc-${idxStr}`)?.value.trim();
+    const cant = parseFloat(document.getElementById(`item-cant-${idxStr}`)?.value) || 0;
+    if (!desc) continue;
+    items.push({
+      nro: items.length + 1,
+      codigo_material: document.getElementById(`item-cod-${idxStr}`)?.value.trim() || null,
+      descripcion: desc,
+      cantidad: cant,
+      unidad: document.getElementById(`item-und-${idxStr}`)?.value.trim() || 'E',
+    });
+  }
+  if (!items.length) return toast('Agregá al menos un ítem al pedido', 'error');
+
+  const pedidos = DB.getPedidos();
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0];
+
+  if (editingPedidoId) {
+    // Edit existing
+    const idx = pedidos.findIndex(p => p.id === editingPedidoId);
+    if (idx < 0) return;
+    const p = pedidos[idx];
+    p.campo = campo; p.solicitante = solicitante;
+    p.descripcion = descripcion; p.prioridad = prioridad;
+    p.items = items;
+    if (targetEstado !== p.estado) {
+      p.estado = targetEstado;
+      p.historial.push({ estado: targetEstado, usuario: solicitante, rol: currentRole, fecha: now.toISOString(), comentario: null });
+    }
+    pedidos[idx] = p;
+    DB.setPedidos(pedidos);
+    toast(`Pedido ${p.id} actualizado`, 'success');
+    navigate('mis-pedidos');
+    return;
+  }
+
+  // New pedido — generate MWL
+  const mwl = generateMWL(pedidos);
+  const pedido = {
+    id: mwl,
+    campo, solicitante, descripcion, prioridad,
+    fecha_solicitud: dateStr,
+    estado: targetEstado,
+    items,
+    historial: [{ estado: targetEstado, usuario: solicitante, rol: currentRole, fecha: now.toISOString(), comentario: null }],
+    gestion_compra: { mwl_erp: null, analista: null, estado_chaconet: null, oc: null, fecha_oc: null, fecha_recepcion: null },
+    ajuste_manual: { estado_forzado: null, comentario: null, usuario: null, fecha: null }
+  };
+  pedidos.push(pedido);
+  DB.setPedidos(pedidos);
+  DB.setConfig('ultimo_mwl', mwl);
+
+  const msg = targetEstado === 'Borrador'
+    ? `Borrador guardado: ${mwl}`
+    : `Pedido ${mwl} enviado al supervisor`;
+  toast(msg, 'success');
+  navigate('mis-pedidos');
+}
+
+function generateMWL(pedidos) {
+  const nums = pedidos
+    .map(p => parseInt(p.id.replace(/[^0-9]/g,'')))
+    .filter(n => !isNaN(n));
+  const next = nums.length ? Math.max(...nums) + 1 : 1;
+  return CFG.MWL_PREFIX + String(next).padStart(5, '0');
+}
+
+/* ═══════════════════════════════════════
+   APROBACIÓN
+═══════════════════════════════════════ */
+function renderAprobacionList() {
+  let pedidos = DB.getPedidos().filter(p => p.estado === 'Pendiente Aprobacion');
+  const campo = document.getElementById('filter-apro-campo')?.value || '';
+  const prio  = document.getElementById('filter-apro-prio')?.value  || '';
+  if (campo) pedidos = pedidos.filter(p => p.campo === campo);
+  if (prio)  pedidos = pedidos.filter(p => p.prioridad === prio);
+
+  pedidos.sort((a,b) => {
+    const pr = ['URGENTE','ALTA','MEDIA','BAJA'];
+    return pr.indexOf(a.prioridad) - pr.indexOf(b.prioridad);
+  });
+
+  const tbody = document.getElementById('aprobacion-tbody');
+  const empty = document.getElementById('aprobacion-empty');
+  if (!pedidos.length) {
+    tbody.innerHTML = '';
+    empty?.classList.remove('hidden');
+    return;
+  }
+  empty?.classList.add('hidden');
+  tbody.innerHTML = pedidos.map(p => `
+    <tr>
+      <td class="td-mono td-bold">${p.id}</td>
+      <td>${truncate(p.descripcion, 40)}</td>
+      <td>${p.campo}</td>
+      <td>${p.solicitante}</td>
+      <td style="text-align:center;">${p.items.length}</td>
+      <td><span class="prio-${p.prioridad.toLowerCase()}">${p.prioridad}</span></td>
+      <td>${formatDate(p.fecha_solicitud)}</td>
+      <td style="white-space:nowrap;">
+        <button class="btn btn-ghost btn-sm" onclick="openPedidoDetail('${p.id}')">Ver</button>
+        <button class="btn btn-success btn-sm" onclick="abrirAccion('${p.id}','aprobar')" style="margin-left:4px;">✓ Aprobar</button>
+        <button class="btn btn-danger btn-sm" onclick="abrirAccion('${p.id}','rechazar')" style="margin-left:4px;">✗ Dev.</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function abrirAccion(id, tipo) {
+  document.getElementById('accion-pedido-id').value = id;
+  document.getElementById('accion-tipo').value = tipo;
+  document.getElementById('accion-comentario').value = '';
+  document.getElementById('modal-accion-title').textContent = tipo === 'aprobar' ? '✓ Aprobar Pedido' : '✗ Devolver Pedido';
+  const btn = document.getElementById('btn-confirmar-accion');
+  btn.textContent = tipo === 'aprobar' ? 'Aprobar' : 'Devolver al Técnico';
+  btn.className = 'btn ' + (tipo === 'aprobar' ? 'btn-success' : 'btn-danger');
+  openModal('modal-accion');
+}
+
+function confirmarAccion() {
+  const id      = document.getElementById('accion-pedido-id').value;
+  const tipo    = document.getElementById('accion-tipo').value;
+  const comment = document.getElementById('accion-comentario').value.trim();
+
+  if (tipo === 'rechazar' && !comment) return toast('El rechazo requiere un comentario', 'error');
+
+  const pedidos = DB.getPedidos();
+  const p = pedidos.find(x => x.id === id);
+  if (!p) return;
+
+  const nuevoEstado = tipo === 'aprobar' ? 'Aprobado' : 'Devuelto';
+  p.estado = nuevoEstado;
+  p.historial.push({
+    estado: nuevoEstado,
+    usuario: document.getElementById('role-display').textContent,
+    rol: currentRole,
+    fecha: new Date().toISOString(),
+    comentario: comment || null
+  });
+  DB.setPedidos(pedidos);
+
+  closeModal('modal-accion');
+  toast(`Pedido ${id} ${tipo === 'aprobar' ? 'aprobado' : 'devuelto'}`, 'success');
+  renderAprobacionList();
+  refreshDashboard();
+}
+
+/* ═══════════════════════════════════════
+   PEDIDO DETAIL MODAL
+═══════════════════════════════════════ */
+function openPedidoDetail(id) {
+  const p = DB.getPedidos().find(x => x.id === id);
+  if (!p) return;
+
+  document.getElementById('modal-pedido-title').textContent = `${p.id} — ${truncate(p.descripcion, 45)}`;
+
+  const erp = DB.getErpData().find(e => e.mwl === id);
+  const ajuste = DB.getAjustes().find(a => a.mwl === id);
+
+  document.getElementById('modal-pedido-body').innerHTML = `
+    <div class="detail-grid" style="margin-bottom:16px;">
+      <div class="detail-item"><label>Campo</label><div class="detail-value">${p.campo}</div></div>
+      <div class="detail-item"><label>Solicitante</label><div class="detail-value">${p.solicitante}</div></div>
+      <div class="detail-item"><label>Fecha</label><div class="detail-value">${formatDate(p.fecha_solicitud)}</div></div>
+      <div class="detail-item"><label>Prioridad</label><div class="detail-value prio-${p.prioridad.toLowerCase()}">${p.prioridad}</div></div>
+      <div class="detail-item"><label>Estado actual</label><div class="detail-value">${badgeEstado(p.estado)}</div></div>
+      <div class="detail-item"><label>MWL</label><div class="detail-value mono">${p.id}</div></div>
+    </div>
+
+    <div class="section-divider">Ítems solicitados (${p.items.length})</div>
+    <div class="table-wrap" style="margin-bottom:16px;">
+      <table>
+        <thead><tr><th>#</th><th>Código</th><th>Descripción</th><th>Cantidad</th><th>Unidad</th></tr></thead>
+        <tbody>
+          ${p.items.map(i => `
+            <tr>
+              <td class="td-mono">${i.nro}</td>
+              <td class="td-mono">${i.codigo_material || '<span style="color:var(--text3)">—</span>'}</td>
+              <td>${i.descripcion}</td>
+              <td style="text-align:right;">${i.cantidad}</td>
+              <td class="td-mono">${i.unidad}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    ${erp ? `
+      <div class="section-divider">Datos ERP</div>
+      <div class="detail-grid" style="margin-bottom:16px;">
+        <div class="detail-item"><label>Estado Chaconet</label><div class="detail-value">${erp.estado_complementario||'—'}</div></div>
+        <div class="detail-item"><label>OC</label><div class="detail-value mono">${erp.oc||'—'}</div></div>
+        <div class="detail-item"><label>Recepción</label><div class="detail-value">${erp.recepcion||'—'}</div></div>
+      </div>
+    ` : ''}
+
+    ${ajuste ? `
+      <div class="section-divider">Ajuste manual de estado</div>
+      <div class="detail-grid" style="margin-bottom:16px;">
+        <div class="detail-item"><label>Estado forzado</label><div class="detail-value">${badgeEstado(ajuste.estado_forzado)}</div></div>
+        <div class="detail-item" style="grid-column:2/-1;"><label>Comentario</label><div class="detail-value">${ajuste.comentario||'—'}</div></div>
+      </div>
+    ` : ''}
+
+    <div class="section-divider">Historial</div>
+    <div class="timeline">
+      ${p.historial.map((h, i) => `
+        <div class="tl-item">
+          <div class="tl-dot ${i === p.historial.length-1 ? 'active' : 'done'}">
+            ${i === p.historial.length-1 ? '●' : '✓'}
+          </div>
+          <div class="tl-content">
+            <div class="tl-state">${h.estado}</div>
+            <div class="tl-meta">${h.usuario} · ${formatDateTime(h.fecha)}${h.comentario ? ' · '+h.comentario : ''}</div>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  // Footer actions
+  const footer = document.getElementById('modal-pedido-footer');
+  const btns = [];
+  if (p.estado === 'Pendiente Aprobacion' && ['supervisor','almacen','admin'].includes(currentRole)) {
+    btns.push(`<button class="btn btn-success" onclick="closeModal('modal-pedido'); abrirAccion('${p.id}','aprobar')">✓ Aprobar</button>`);
+    btns.push(`<button class="btn btn-danger" onclick="closeModal('modal-pedido'); abrirAccion('${p.id}','rechazar')">✗ Devolver</button>`);
+  }
+  if (['Borrador','Devuelto'].includes(p.estado)) {
+    btns.push(`<button class="btn btn-ghost" onclick="closeModal('modal-pedido'); editPedido('${p.id}')">✏️ Editar</button>`);
+  }
+  if (p.estado === 'Aprobado' && ['almacen','admin'].includes(currentRole)) {
+    btns.push(`<button class="btn btn-primary" onclick="procesarCompra('${p.id}')">📦 Procesar compra</button>`);
+  }
+  btns.push(`<button class="btn btn-ghost" onclick="closeModal('modal-pedido')">Cerrar</button>`);
+  footer.innerHTML = btns.join('');
+
+  openModal('modal-pedido');
+}
+
+function procesarCompra(id) {
+  const pedidos = DB.getPedidos();
+  const p = pedidos.find(x => x.id === id);
+  if (!p) return;
+  p.estado = 'En Proceso Compra';
+  p.historial.push({ estado: 'En Proceso Compra', usuario: document.getElementById('role-display').textContent, rol: currentRole, fecha: new Date().toISOString(), comentario: null });
+  DB.setPedidos(pedidos);
+  closeModal('modal-pedido');
+  toast(`Pedido ${id} en proceso de compra`, 'success');
+  refreshDashboard();
+}
+
+/* ═══════════════════════════════════════
+   SEGUIMIENTO ERP
+═══════════════════════════════════════ */
+function renderSeguimiento() {
+  let data = DB.getErpData();
+  const search = (document.getElementById('filter-seg-search')?.value || '').toLowerCase();
+  const estado = document.getElementById('filter-seg-estado')?.value || '';
+
+  if (search) data = data.filter(e => e.mwl.toLowerCase().includes(search) || (e.descripcion||'').toLowerCase().includes(search));
+  if (estado) data = data.filter(e => e.estado_pedido === estado);
+
+  const tbody = document.getElementById('seguimiento-tbody');
+  const empty = document.getElementById('seguimiento-empty');
+
+  if (!data.length) {
+    tbody.innerHTML = '';
+    empty?.classList.remove('hidden');
+    return;
+  }
+  empty?.classList.add('hidden');
+
+  tbody.innerHTML = data.map(e => `
+    <tr>
+      <td class="td-mono td-bold">${e.mwl}</td>
+      <td>${truncate(e.descripcion||'—', 45)}</td>
+      <td>${e.campo||'—'}</td>
+      <td style="font-size:11px;">${e.estado_complementario||'—'}</td>
+      <td class="td-mono" style="font-size:11px;">${e.oc||'—'}</td>
+      <td style="font-size:11px;">${e.recepcion||'—'}</td>
+      <td>${badgeEstado(e.estado_pedido||e.estado_complementario||'—')}</td>
+      <td><button class="btn btn-ghost btn-sm" onclick="openPedidoDetail('${e.mwl}')">Ver</button></td>
+    </tr>
+  `).join('');
+}
+
+/* ═══════════════════════════════════════
+   AJUSTES DE ESTADO
+═══════════════════════════════════════ */
+function renderAjustes() {
+  const ajustes = DB.getAjustes();
+  const tbody = document.getElementById('ajustes-tbody');
+  const empty = document.getElementById('ajustes-empty');
+
+  if (!ajustes.length) {
+    tbody.innerHTML = '';
+    empty?.classList.remove('hidden');
+    return;
+  }
+  empty?.classList.add('hidden');
+
+  tbody.innerHTML = ajustes.map((a, i) => `
+    <tr>
+      <td class="td-mono td-bold">${a.mwl}</td>
+      <td>${truncate(a.descripcion||'—', 40)}</td>
+      <td>${badgeEstado(a.estado_forzado)}</td>
+      <td style="font-size:12px;">${a.comentario||'—'}</td>
+      <td style="font-size:12px;">${a.usuario||'—'}</td>
+      <td style="font-size:12px;">${a.fecha ? formatDate(a.fecha.split('T')[0]) : '—'}</td>
+      <td>
+        <button class="btn btn-danger btn-sm" onclick="removeAjuste(${i})">✕</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function addAjuste() {
+  document.getElementById('aj-mwl').value = '';
+  document.getElementById('aj-desc').value = '';
+  document.getElementById('aj-estado').value = '';
+  document.getElementById('aj-comentario').value = '';
+  openModal('modal-ajuste');
+}
+
+function guardarAjuste() {
+  const mwl     = document.getElementById('aj-mwl').value.trim();
+  const estado  = document.getElementById('aj-estado').value;
+  const desc    = document.getElementById('aj-desc').value.trim();
+  const comment = document.getElementById('aj-comentario').value.trim();
+
+  if (!mwl)    return toast('Ingresá el MWL', 'error');
+  if (!estado) return toast('Seleccioná un estado', 'error');
+
+  const ajustes = DB.getAjustes();
+  const existIdx = ajustes.findIndex(a => a.mwl === mwl);
+  const newEntry = {
+    mwl, descripcion: desc, estado_forzado: estado,
+    comentario: comment,
+    usuario: document.getElementById('role-display').textContent,
+    fecha: new Date().toISOString()
+  };
+
+  if (existIdx >= 0) ajustes[existIdx] = newEntry;
+  else ajustes.push(newEntry);
+
+  // Also update pedido state if exists
+  const pedidos = DB.getPedidos();
+  const p = pedidos.find(x => x.id === mwl);
+  if (p) {
+    p.estado = estado;
+    p.ajuste_manual = { estado_forzado: estado, comentario: comment, usuario: newEntry.usuario, fecha: newEntry.fecha };
+    p.historial.push({ estado, usuario: newEntry.usuario, rol: currentRole, fecha: newEntry.fecha, comentario: `Ajuste manual: ${comment}` });
+    DB.setPedidos(pedidos);
+  }
+
+  DB.setAjustes(ajustes);
+  closeModal('modal-ajuste');
+  toast('Ajuste guardado', 'success');
+  renderAjustes();
+}
+
+function removeAjuste(idx) {
+  const ajustes = DB.getAjustes();
+  ajustes.splice(idx, 1);
+  DB.setAjustes(ajustes);
+  renderAjustes();
+  toast('Ajuste eliminado');
+}
+
+/* ═══════════════════════════════════════
+   IMPORT: MATERIALES
+═══════════════════════════════════════ */
+function dropHandler(event, type) {
+  event.preventDefault();
+  document.getElementById('dz-'+type)?.classList.remove('drag-over');
+  const file = event.dataTransfer.files[0];
+  if (!file) return;
+  if (type === 'materiales') processMaterialesFile(file);
+  else processERPFile(file);
+}
+
+function importMateriales(input) {
+  if (input.files[0]) processMaterialesFile(input.files[0]);
+}
+
+function processMaterialesFile(file) {
+  const prog = document.getElementById('mat-progress');
+  const fill = document.getElementById('mat-progress-fill');
+  const label = document.getElementById('mat-progress-label');
+  const result = document.getElementById('mat-result');
+  if (prog) prog.style.display = 'block';
+  if (result) result.style.display = 'none';
+  if (fill) fill.style.width = '10%';
+  if (label) label.textContent = 'Leyendo archivo...';
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      if (fill) fill.style.width = '40%';
+      if (label) label.textContent = 'Parseando Excel...';
+
+      const wb = XLSX.read(e.target.result, { type: 'array' });
+      const ws = wb.Sheets['mtrListaMat'] || wb.Sheets[wb.SheetNames[0]];
+      if (fill) fill.style.width = '65%';
+      if (label) label.textContent = 'Procesando filas...';
+
+      const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      const mats = rows.map(r => ({
+        cod_material: String(r['COD. MATERIAL']||'').trim(),
+        descripcion:  String(r['DESCRIPCION']||'').trim(),
+        dep:  String(r['DEP.']||'').trim(),
+        alm:  String(r['ALM.']||'').trim(),
+        saldo: parseFloat(r['SALDO']||0) || 0,
+        unidad: String(r['UNIDAD']||'E').trim(),
+        stock_seg: parseFloat(r['STOCK SEG']||0) || 0,
+        precio_estimado: parseFloat(r['PRECIO  ESTIMADO ']||r['PRECIO ESTIMADO']||0) || 0,
+        nro_parte: String(r['NRO. PARTE']||'').trim(),
+        cod_ubicacion: String(r['COD. UBICACION']||'').trim(),
+      })).filter(m => m.cod_material);
+
+      fuseIndex = null; // reset index
+      DB.setMateriales(mats);
+      DB.setConfig('materiales_version', new Date().toISOString().split('T')[0]);
+      DB.setConfig('materiales_count', mats.length);
+
+      if (fill) fill.style.width = '100%';
+      if (label) label.textContent = '¡Listo!';
+      if (result) { result.style.display = 'block'; result.textContent = `✓ ${mats.length.toLocaleString()} materiales importados`; }
+      updateMatVersion();
+      toast(`${mats.length.toLocaleString()} materiales cargados`, 'success');
+    } catch(err) {
+      if (label) label.textContent = 'Error: '+err.message;
+      toast('Error al importar materiales: '+err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function updateMatVersion() {
+  const ver = DB.getConfig('materiales_version');
+  const cnt = DB.getConfig('materiales_count');
+  const el = document.getElementById('mat-version');
+  if (el && ver) el.textContent = `${cnt?.toLocaleString()||'?'} materiales · Cargado: ${ver}`;
+}
+
+/* ═══════════════════════════════════════
+   IMPORT: ERP SPM
+═══════════════════════════════════════ */
+function importERP(input) {
+  if (input.files[0]) processERPFile(input.files[0]);
+}
+
+function processERPFile(file) {
+  const prog  = document.getElementById('erp-progress');
+  const fill  = document.getElementById('erp-progress-fill');
+  const label = document.getElementById('erp-progress-label');
+  const result= document.getElementById('erp-result');
+  if (prog) prog.style.display = 'block';
+  if (fill) fill.style.width = '10%';
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      if (fill) fill.style.width = '40%';
+      const wb  = XLSX.read(e.target.result, { type: 'array' });
+      const ws  = wb.Sheets['SPM'] || wb.Sheets[wb.SheetNames[0]];
+      if (fill) fill.style.width = '60%';
+
+      const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      const erp = parseSPM(rows);
+
+      if (fill) fill.style.width = '85%';
+      DB.setErpData(erp);
+      DB.setConfig('erp_version', new Date().toISOString().split('T')[0]);
+
+      // Cross-update pedidos
+      crossUpdatePedidos(erp);
+
+      if (fill) fill.style.width = '100%';
+      if (result) { result.style.display='block'; result.textContent = `✓ ${erp.length} pedidos ERP importados`; }
+      if (document.getElementById('erp-version')) document.getElementById('erp-version').textContent = DB.getConfig('erp_version');
+      if (document.getElementById('erp-version2')) document.getElementById('erp-version2').textContent = `${erp.length} pedidos · ${DB.getConfig('erp_version')}`;
+      document.getElementById('erp-status-bar').style.display = 'block';
+      toast(`${erp.length} pedidos ERP actualizados`, 'success');
+    } catch(err) {
+      if (label) label.textContent = 'Error: '+err.message;
+      toast('Error al importar ERP: '+err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function parseSPM(rows) {
+  const pedidos = [];
+  let current = null;
+
+  for (const row of rows) {
+    const col0 = String(row[0]||'');
+    if (col0.startsWith('# Gst:')) {
+      if (current) pedidos.push(current);
+      current = {
+        gst:   col0.replace('# Gst:','').trim(),
+        mwl:   String(row[2]||'').trim(),
+        campo: String(row[4]||'').trim(),
+        fecha_solicitud: parseERPDate(String(row[6]||'')),
+        oca:   String(row[8]||'').trim(),
+        estado_inicial:       String(row[9]||'').trim(),
+        estado_complementario: String(row[11]||'').trim(),
+        analista: String(row[12]||'').trim(),
+        descripcion: String(row[13]||'').trim(),
+        oc: String(row[15]||'').trim(),
+        recepcion: String(row[16]||'').trim(),
+        despacho:  String(row[17]||'').trim(),
+        estado_pedido: null,
+        items: []
+      };
+    } else if (current && row[1]) {
+      current.items.push({
+        nro:  row[1],
+        codigo: String(row[2]||'').trim(),
+        descripcion: String(row[3]||'').trim(),
+        cantidad: parseFloat(row[4])||0
+      });
+    }
+  }
+  if (current) pedidos.push(current);
+  return pedidos.filter(p => p.mwl);
+}
+
+function parseERPDate(str) {
+  const m = str.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  return str.replace('Fecha Sol. ','').trim();
+}
+
+function crossUpdatePedidos(erp) {
+  const pedidos = DB.getPedidos();
+  let updated = 0;
+  for (const e of erp) {
+    const p = pedidos.find(x => x.id === e.mwl);
+    if (p) {
+      p.gestion_compra = {
+        mwl_erp: e.mwl,
+        analista: e.analista,
+        estado_chaconet: e.estado_complementario,
+        oc: e.oc,
+        recepcion: e.recepcion
+      };
+      if (e.estado_complementario) {
+        const nuevoEstado = mapEstadoERP(e.estado_complementario);
+        if (nuevoEstado && nuevoEstado !== p.estado) {
+          p.estado = nuevoEstado;
+          p.historial.push({ estado: nuevoEstado, usuario: 'Sistema (ERP)', rol: 'sistema', fecha: new Date().toISOString(), comentario: null });
+          updated++;
+        }
+      }
+    }
+  }
+  DB.setPedidos(pedidos);
+}
+
+function mapEstadoERP(estadoChaconet) {
+  if (!estadoChaconet) return null;
+  const s = estadoChaconet.toLowerCase();
+  if (s.includes('desierto')) return '4 Desierto';
+  if (s.includes('orden de compra') || s.includes('con oc')) return '5 Con Orden de Compra';
+  if (s.includes('parcial')) return '6 Entrega Parcial';
+  if (s.includes('anulado') || s.includes('anulada')) return '7 Anulado';
+  if (s.includes('contrato maestro')) return '8 Contrato Maestro';
+  if (s.includes('transferencia')) return '8 Transferencia';
+  if (s.includes('cerrado') || s.includes('recibido')) return '9 Recibido';
+  if (s.includes('cierre manual')) return '9 Recibido';
+  if (s.includes('aprobado')) return '3 En proceso Chaconet';
+  return null;
+}
+
+/* ═══════════════════════════════════════
+   REPORTE XLSX
+═══════════════════════════════════════ */
+function generarReporte() {
+  const mes  = document.getElementById('rep-mes').value;
+  const anio = document.getElementById('rep-anio').value;
+  const result = document.getElementById('rep-result');
+
+  const pedidos = DB.getPedidos();
+  const erp = DB.getErpData();
+  const ajustes = DB.getAjustes();
+
+  if (!pedidos.length && !erp.length) {
+    result.textContent = '⚠ Sin datos suficientes para generar el reporte';
+    result.style.color = 'var(--orange)';
+    return;
+  }
+
+  try {
+    const wb = XLSX.utils.book_new();
+
+    // Sheet: Reportes
+    const repHeaders = ['MWL','Campo','Solicitante','Descripcion','Prioridad','Estado','Fecha Solicitud','Analista','OC','Recepcion'];
+    const repRows = pedidos.map(p => [
+      p.id, p.campo, p.solicitante, p.descripcion, p.prioridad, p.estado, p.fecha_solicitud,
+      p.gestion_compra?.analista||'', p.gestion_compra?.oc||'', p.gestion_compra?.recepcion||''
+    ]);
+    const wsRep = XLSX.utils.aoa_to_sheet([repHeaders, ...repRows]);
+    XLSX.utils.book_append_sheet(wb, wsRep, 'Reportes');
+
+    // Sheet: Ajustes
+    const ajHeaders = ['MWL','Descripcion','Estado Pedido','Comentarios','Usuario','Fecha'];
+    const ajRows = ajustes.map(a => [a.mwl, a.descripcion||'', a.estado_forzado, a.comentario||'', a.usuario||'', a.fecha ? a.fecha.split('T')[0] : '']);
+    const wsAj = XLSX.utils.aoa_to_sheet([ajHeaders, ...ajRows]);
+    XLSX.utils.book_append_sheet(wb, wsAj, 'Ajustes');
+
+    // Sheet: Informe
+    const campos = [...new Set(pedidos.map(p => p.campo))];
+    const infHeaders = ['Campo', 'Total', 'Pendientes', 'Aprobados', 'En Proceso', 'Recibidos', 'Anulados'];
+    const infRows = campos.map(c => {
+      const cp = pedidos.filter(p => p.campo === c);
+      return [c, cp.length,
+        cp.filter(p=>p.estado==='Pendiente Aprobacion').length,
+        cp.filter(p=>p.estado==='Aprobado').length,
+        cp.filter(p=>['En Proceso Compra','3 En proceso Chaconet','5 Con Orden de Compra'].includes(p.estado)).length,
+        cp.filter(p=>p.estado==='9 Recibido').length,
+        cp.filter(p=>p.estado==='7 Anulado').length
+      ];
+    });
+    const wsInf = XLSX.utils.aoa_to_sheet([infHeaders, ...infRows]);
+    XLSX.utils.book_append_sheet(wb, wsInf, 'Informe');
+
+    // Sheet: Estadistica Mensual
+    const estHeaders = ['Estado','CRC-MANTTO','PCH-MANTTO','PJS-MANTTO','VGR-MANTTO','Total'];
+    const estados = [...new Set(pedidos.map(p=>p.estado))];
+    const estRows = estados.map(est => {
+      const row = [est];
+      let tot = 0;
+      ['CRC-MANTTO','PCH-MANTTO','PJS-MANTTO','VGR-MANTTO'].forEach(c => {
+        const n = pedidos.filter(p=>p.estado===est&&p.campo===c).length;
+        row.push(n); tot+=n;
+      });
+      row.push(tot);
+      return row;
+    });
+    const wsEst = XLSX.utils.aoa_to_sheet([estHeaders, ...estRows]);
+    XLSX.utils.book_append_sheet(wb, wsEst, 'Estadistica Mensual');
+
+    // Sheet: Dashboards
+    const meses = ['','Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const dashData = [
+      ['Control de Pedidos de Materiales','','',''],
+      [`Reporte ${meses[parseInt(mes)]} ${anio}`,'','',''],
+      ['','','',''],
+      ['Total Pedidos', pedidos.length,'',''],
+      ['Pendientes Aprobacion', pedidos.filter(p=>p.estado==='Pendiente Aprobacion').length,'',''],
+      ['Aprobados', pedidos.filter(p=>p.estado==='Aprobado').length,'',''],
+      ['En Proceso', pedidos.filter(p=>['En Proceso Compra','3 En proceso Chaconet','5 Con Orden de Compra'].includes(p.estado)).length,'',''],
+      ['Recibidos', pedidos.filter(p=>p.estado==='9 Recibido').length,'',''],
+      ['Anulados', pedidos.filter(p=>p.estado==='7 Anulado').length,'',''],
+    ];
+    const wsDash = XLSX.utils.aoa_to_sheet(dashData);
+    XLSX.utils.book_append_sheet(wb, wsDash, 'Dashboards');
+
+    const fileName = `Reporte_Pedidos_${anio}_${mes}_${meses[parseInt(mes)]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+
+    result.textContent = `✓ Reporte generado: ${fileName}`;
+    result.style.color = 'var(--green)';
+    toast('Reporte XLSX descargado', 'success');
+  } catch(err) {
+    result.textContent = 'Error: '+err.message;
+    result.style.color = 'var(--red)';
+  }
+}
+
+/* ═══════════════════════════════════════
+   MODAL HELPERS
+═══════════════════════════════════════ */
+function openModal(id)  { document.getElementById(id)?.classList.add('open'); }
+function closeModal(id) { document.getElementById(id)?.classList.remove('open'); }
+
+document.querySelectorAll('.modal-overlay').forEach(o => {
+  o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+});
+
+/* ═══════════════════════════════════════
+   TOAST
+═══════════════════════════════════════ */
+let toastTimer = null;
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'show ' + type;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.className = '', 2800);
+}
+
+/* ═══════════════════════════════════════
+   BADGE HELPERS
+═══════════════════════════════════════ */
+function badgeEstado(estado) {
+  const map = {
+    'Borrador':             'badge-draft',
+    'Pendiente Aprobacion': 'badge-pending',
+    'Aprobado':             'badge-approved',
+    'Devuelto':             'badge-returned',
+    'En Proceso Compra':    'badge-process',
+    '3 En proceso Chaconet':'badge-process',
+    '5 Con Orden de Compra':'badge-process',
+    '6 Entrega Parcial':    'badge-process',
+    '9 Recibido':           'badge-received',
+    '8 Contrato Maestro':   'badge-received',
+    '8 Transferencia':      'badge-received',
+    '7 Anulado':            'badge-cancelled',
+    '4 Desierto':           'badge-cancelled',
+  };
+  const cls = map[estado] || 'badge-draft';
+  return `<span class="badge ${cls}">${estado||'—'}</span>`;
+}
+
+/* ═══════════════════════════════════════
+   DATE / STRING UTILS
+═══════════════════════════════════════ */
+function formatDate(str) {
+  if (!str) return '—';
+  const d = new Date(str+'T00:00:00');
+  return isNaN(d) ? str : d.toLocaleDateString('es-BO',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function formatDateTime(str) {
+  if (!str) return '—';
+  const d = new Date(str);
+  return isNaN(d) ? str : d.toLocaleDateString('es-BO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+function truncate(str, n) { return str && str.length > n ? str.substring(0,n)+'…' : (str||''); }
+function setText(id, val) { const el = document.getElementById(id); if(el) el.textContent = val; }
+function escJS(str) { return (str||'').replace(/'/g,"\\'").replace(/"/g,'\\"'); }
+
+/* ═══════════════════════════════════════
+   INIT
+═══════════════════════════════════════ */
+(function init() {
+  // Restore session
+  const savedRole = sessionStorage.getItem('cpm_role');
+  if (savedRole) {
+    setRole(savedRole);
+  }
+
+  // Load import versions
+  updateMatVersion();
+  const erpVer = DB.getConfig('erp_version');
+  if (erpVer) {
+    const erp = DB.getErpData();
+    const el2 = document.getElementById('erp-version2');
+    if (el2) el2.textContent = `${erp.length} pedidos · ${erpVer}`;
+    const elBar = document.getElementById('erp-status-bar');
+    if (elBar) elBar.style.display = 'block';
+    const elV = document.getElementById('erp-version');
+    if (elV) elV.textContent = erpVer;
+  }
+})();
+</script>
+</body>
+</html>
