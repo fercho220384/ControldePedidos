@@ -1,0 +1,97 @@
+{
+  "version": "1.0",
+  "descripcion": "Estructura de un pedido en el sistema Control de Pedidos",
+  "ejemplo": {
+    "id": "MWL2600001",
+    "campo": "CRC-MANTTO",
+    "solicitante": "García, Juan",
+    "fecha_solicitud": "2026-03-28",
+    "descripcion": "REPUESTOS BOMBA CENTRIFUGA CRC-M-001",
+    "prioridad": "ALTA",
+    "estado": "Aprobado",
+    "items": [
+      {
+        "nro": 1,
+        "codigo_material": "ACAAAD385182",
+        "descripcion": "SEAT WRENCH 2 NOM H2 CHOKE",
+        "cantidad": 2,
+        "unidad": "E",
+        "stock_sugerido": true,
+        "saldo_disponible": 5,
+        "almacen": "H",
+        "deposito": "SC",
+        "ubicacion": "AFE  KNE-2"
+      },
+      {
+        "nro": 2,
+        "codigo_material": null,
+        "descripcion": "SELLO MECANICO BOMBA 3 PULG NPT",
+        "cantidad": 1,
+        "unidad": "E",
+        "stock_sugerido": false,
+        "saldo_disponible": 0,
+        "almacen": null,
+        "deposito": null,
+        "ubicacion": null
+      }
+    ],
+    "historial": [
+      {
+        "estado": "Borrador",
+        "usuario": "García, Juan",
+        "rol": "Tecnico",
+        "fecha": "2026-03-28T10:00:00",
+        "comentario": null
+      },
+      {
+        "estado": "Pendiente Aprobacion",
+        "usuario": "García, Juan",
+        "rol": "Tecnico",
+        "fecha": "2026-03-28T10:45:00",
+        "comentario": "Urgente para mantenimiento preventivo"
+      },
+      {
+        "estado": "Aprobado",
+        "usuario": "Pérez, Ana",
+        "rol": "Supervisor",
+        "fecha": "2026-03-29T08:30:00",
+        "comentario": "Aprobado. Verificar stock ítem 1 antes de comprar."
+      }
+    ],
+    "gestion_compra": {
+      "mwl_erp": "MWL2600001",
+      "analista": null,
+      "estado_chaconet": null,
+      "oc": null,
+      "fecha_oc": null,
+      "fecha_recepcion_estimada": null,
+      "fecha_recepcion_real": null,
+      "contrato_maestro": null
+    },
+    "ajuste_manual": {
+      "estado_forzado": null,
+      "comentario": null,
+      "usuario": null,
+      "fecha": null
+    }
+  },
+  "estados_validos": [
+    "Borrador",
+    "Pendiente Aprobacion",
+    "Devuelto",
+    "Aprobado",
+    "En Proceso Compra",
+    "1 En Registro AAUTO",
+    "1 En Registro AREVI",
+    "1 En Registro INGRE",
+    "2 Sin Chaconet",
+    "3 En proceso Chaconet",
+    "4 Desierto",
+    "5 Con Orden de Compra",
+    "6 Entrega Parcial",
+    "7 Anulado",
+    "8 Contrato Maestro",
+    "8 Transferencia",
+    "9 Recibido"
+  ]
+}
